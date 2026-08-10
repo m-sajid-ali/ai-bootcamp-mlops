@@ -1,4 +1,4 @@
-# MLOps Day 1 — Reproducibility & Tracking (all local, terminal + Docker)
+# MLOps — Reproducibility & Tracking (all local, terminal + Docker)
 
 One container, one project, two parts — **same interface throughout** (a terminal + the
 MLflow UI). No notebooks.
@@ -60,7 +60,8 @@ Open a **second** shell the same way for the MLflow UI (below).
    - tick two runs -> **Compare** -> exactly which params differ
    - click a run -> its **params, metric, and the saved model** are all there
 
-*"This is the record we could never keep by hand — automatic, comparable, permanent."*
+**Say:** *"This is the record we could never keep by hand — automatic, comparable, permanent.
+And because the database lives in our mounted folder, it survives restarts."*
 
 4. **The catch.** Open any run in the UI and find the **Git Commit** field — it's empty.
    MLflow tracked the *experiment* beautifully… but nothing tracked the **code**. If we change
@@ -131,3 +132,93 @@ experiments, Git marks the milestones, and "when do I commit?" answers itself.
 `house_prices.csv` just sits there. MLflow noted *which* prep each run used, but nothing
 **versions the data itself**. If the file changes tomorrow, our records point at... what?
 -> that's **DVC**, the next gap.
+
+---
+
+# Part C — Version the data too (DVC)
+ 
+**Goal:** version the *data*, so a run can be rebuilt with the exact data that produced it.
+Git versions code, MLflow tracks runs — but nothing has been versioning the **data**.
+ 
+## The problem — the data isn't recorded at all
+ 
+Look at any run in the MLflow UI: there's **no record of which data it used** — the Dataset
+column is empty, and no parameter captures it. Now watch that become dangerous.
+```
+python train.py --run-name before_change --n-estimators 200
+python change_data.py          # edits house_prices.csv IN PLACE (same filename)
+python train.py --run-name after_change  --n-estimators 200
+```
+Compare the two runs:
+```
+python -c "import mlflow; mlflow.set_tracking_uri('sqlite:///mlflow.db'); \
+r=mlflow.search_runs(experiment_names=['house-prices'], order_by=['start_time ASC']); \
+r['commit']=r['tags.mlflow.source.git.commit'].str[:7]; \
+print(r[['tags.mlflow.runName','params.n_estimators','metrics.rmse','commit']].to_string(index=False))"
+```
+same params, **same git commit**, but a different RMSE — and *nothing
+in the record explains why*. The data changed underneath us, and the original data is now
+overwritten. **Which data made `before_change`? You can't get it back.** Git tracked the code,
+MLflow tracked the run, and the data fell through the gap between them.
+ 
+## The fix — DVC versions the data
+ 
+**1. Initialise DVC and hand the data over from git to DVC.**
+(The CSV was tracked by git in Parts A/B; DVC takes it over.)
+```
+dvc init
+git rm -r --cached house_prices.csv        # stop git tracking the big file
+dvc add house_prices.csv                    # DVC now tracks it
+git add house_prices.csv.dvc .gitignore
+git commit -m "track data with DVC (v1)"
+```
+Show the tiny **`house_prices.csv.dvc`** pointer — it holds the data's md5 hash and *is* tracked
+by git. The CSV itself is now in `.gitignore` (git no longer stores the big file).
+ 
+**2. Add a local remote (a folder — persists via the mounted volume) and push.**
+```
+dvc remote add -d localremote /dvc-remote
+git add .dvc/config && git commit -m "add local DVC remote"
+dvc push                                     # data now stored in /dvc-remote
+```
+ 
+**3. Now train with data tracking — use `train_dvc.py`.**
+Same training code, but it logs the **DVC data version** as a param and registers the
+**dataset** in MLflow (filling the UI's Dataset column):
+```
+python train_dvc.py --run-name dvc_baseline   --n-estimators 300
+python train_dvc.py --run-name dvc_more_trees --n-estimators 500
+```
+In the runs table, the **old `train.py` runs show no data** (empty Dataset / `data_version`),
+while the new `dvc_*` runs show the DVC hash and a dataset entry. Same experiment, one table,
+before-and-after at a glance.
+ 
+> **The key point:** MLflow now *records* which data was used — but it's the `data_version`
+> (the DVC hash) that lets us *restore* it. **MLflow points; DVC rebuilds.**
+ 
+**4. Make a new data version and prove you can go back.**
+```
+python change_data.py                        # data -> v2
+dvc add house_prices.csv
+git add house_prices.csv.dvc && git commit -m "data v2 (cleaned)"
+dvc push
+ 
+git checkout HEAD~1 -- house_prices.csv.dvc  # go back to the v1 pointer
+dvc checkout house_prices.csv                # DVC restores the exact v1 file
+md5sum house_prices.csv                        # matches v1 again
+```
+**The v1 data is back, byte for byte.** Re-run `train_dvc.py` and the original result returns.
+Reproducibility restored.
+ 
+---
+ 
+## The complete mental model (the final takeaway slide)
+| What you version | Tool |
+|---|---|
+| experiments — params, metrics, the model | **MLflow** |
+| code | **Git** |
+| data | **DVC** |
+ 
+Together they reproduce any past run — the exact **experiment**, the exact **code**, and the
+exact **data** that produced it. That is the reproducibility gap, fully closed.
+
