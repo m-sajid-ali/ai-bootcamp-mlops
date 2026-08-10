@@ -1,0 +1,13 @@
+# All the settings for one training run — edit THIS file, not the command line.
+# This file is the experiment's input: log it every run, commit it at milestones.
+
+run_name: config_baseline
+
+model:
+  n_estimators: 300
+  max_depth: 15        # use null for "no limit"
+
+data:
+  path: ../data/house_prices.csv
+  test_size: 0.2
+  seed: 42

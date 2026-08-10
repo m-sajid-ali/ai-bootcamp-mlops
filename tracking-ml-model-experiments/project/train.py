@@ -8,6 +8,7 @@ The LOGIC we occasionally change (features, preprocessing) lives in the code bel
 in build_features(). Changing that is a real code change -> commit it before running.
 """
 import argparse
+import time
 import pandas as pd
 import mlflow
 import mlflow.sklearn
@@ -53,10 +54,18 @@ def main(args):
         )
         model.fit(X_train, y_train)
 
-        rmse = mean_squared_error(y_test, model.predict(X_test)) ** 0.5
+        start = time.perf_counter()
+        
+        preds = model.predict(X_test)
+        predict_time = time.perf_counter() - start
+
+        rmse = mean_squared_error(y_test, preds) ** 0.5
 
         # OUTPUTS — the result and the model itself
         mlflow.log_metric("rmse", rmse)
+        mlflow.log_metric("predict_time_sec", predict_time)          # batch predict time
+        mlflow.log_metric("predict_ms_per_row", predict_time / len(X_test) * 1000)  # per-row
+
         mlflow.sklearn.log_model(model, name="model", input_example=X_test.iloc[:2])
 
         # MLflow auto-records the git commit as a tag (mlflow.source.git.commit)
@@ -66,7 +75,7 @@ def main(args):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("--data", default="house_prices.csv")
+    p.add_argument("--data", default="data/house_prices.csv")
     p.add_argument("--run-name", default="run")
     p.add_argument("--n-estimators", type=int, default=100)
     p.add_argument("--max-depth", type=int, default=None)

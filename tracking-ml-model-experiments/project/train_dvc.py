@@ -82,7 +82,7 @@ def main(args):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("--data", default="house_prices.csv")
+    p.add_argument("--data", default="data/house_prices.csv")
     p.add_argument("--run-name", default="dvc_run")
     p.add_argument("--n-estimators", type=int, default=100)
     p.add_argument("--max-depth", type=int, default=None)
