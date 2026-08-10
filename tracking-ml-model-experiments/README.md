@@ -11,7 +11,7 @@ MLflow UI). No notebooks.
 Part B is the *same work* as Part A — the only thing that changes is that we add git.
 
 ```
-mlops-lab/
+tracking-ml-model-experiments/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -21,31 +21,24 @@ mlops-lab/
     └── README.md
 ```
 
-## One-time setup (before class)
+## One-time setup
 ```
-cd mlops-lab
-docker compose build          # slow ONCE; layers cache, so it's a one-time fetch
+cd tracking-ml-model-experiments
+docker compose build         
 ```
 
-## Start it (demo day — instant)
+## Start it
 ```
-docker compose up -d          # container starts in seconds and stays running
+docker compose up -d        
 docker compose exec lab bash  # your working shell, inside /workspace
 ```
-Open a **second** shell the same way for the MLflow UI (below).
-
 ---
 
 # Part A — Meet MLflow (terminal + UI)
 
 **Goal:** run experiments and watch MLflow track every one.
 
-1. **Start the MLflow UI.** In a second shell (`docker compose exec lab bash`):
-   ```
-   mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0
-   ```
-   Open **http://localhost:5000** in your browser. Leave it open.
-
+1. Open **http://localhost:5000** in your browser. Leave it open.
 2. **Run a few experiments** (in your first shell). Same code, different inputs:
    ```
    python train.py --run-name baseline    --n-estimators 100
@@ -55,12 +48,12 @@ Open a **second** shell the same way for the MLflow UI (below).
    ```
    After each run, **switch to the UI** and watch the row appear.
 
-3. **Observe tracking in the UI** — the part to make them *feel*:
+3. **Observe tracking in the UI** — the part to make you *feel*:
    - sort by `rmse` -> the **best** run, instantly
    - tick two runs -> **Compare** -> exactly which params differ
    - click a run -> its **params, metric, and the saved model** are all there
 
-**Say:** *"This is the record we could never keep by hand — automatic, comparable, permanent.
+*"This is the record we could never keep by hand — automatic, comparable, permanent.
 And because the database lives in our mounted folder, it survives restarts."*
 
 4. **The catch.** Open any run in the UI and find the **Git Commit** field — it's empty.
@@ -85,7 +78,7 @@ python train.py --run-name g_baseline    --n-estimators 100
 python train.py --run-name g_more_trees  --n-estimators 300
 python train.py --run-name g_depth15     --n-estimators 300 --max-depth 15
 ```
-**Say:** *"Three experiments, zero code edits, zero commits. MLflow logged the params.
+*"Three experiments, zero code edits, zero commits. MLflow logged the params.
 There's nothing to version — the code is byte-for-byte the same."*
 
 ### 2) Logic change = editing CODE -> commit, then run
@@ -98,27 +91,22 @@ Then:
 git add -A && git commit -m "add rooms_per_person feature"
 python train.py --run-name g_with_feature --n-estimators 300
 ```
-**Say:** *"This changed what the code does — so we commit once, then run.
+*"This changed what the code does — so we commit once, then run.
 Now MLflow's commit pointer actually means something."*
 
 ### 3) The payoff — the two records line up
 ```
 git log --oneline
 ```
-Refresh the **MLflow UI** and show the **Git Commit** column, or print it:
-```
-python -c "import mlflow; mlflow.set_tracking_uri('sqlite:///mlflow.db'); \
-r=mlflow.search_runs(experiment_names=['house-prices'], order_by=['start_time ASC']); \
-r['commit']=r['tags.mlflow.source.git.commit'].str[:7]; \
-print(r[['tags.mlflow.runName','params.n_estimators','params.max_depth','metrics.rmse','commit']].to_string(index=False))"
-```
-**The lesson, on screen:** the param-only runs share **one** commit (code never changed);
-`g_with_feature` carries a **new** commit. To rebuild any run: read its commit, `git checkout`,
+Refresh the **MLflow UI** and see the **Git Version Commit** column value, or print it:
+
+**The lesson:** the param-only runs share **one** commit (code never changed);
+`version` carries a **new** commit. To rebuild any run: read its commit, `git checkout`,
 and you have the exact code that produced it.
 
 ---
 
-## The three-way mental model (your takeaway slide)
+## The three-way mental model
 | What you change | Code edit? | Tracked by |
 |---|---|---|
 | a value you vary (n_estimators, seed) — **as an arg** | No | **MLflow** (param) |
@@ -149,13 +137,8 @@ python train.py --run-name before_change --n-estimators 200
 python change_data.py          # edits house_prices.csv IN PLACE (same filename)
 python train.py --run-name after_change  --n-estimators 200
 ```
-Compare the two runs:
-```
-python -c "import mlflow; mlflow.set_tracking_uri('sqlite:///mlflow.db'); \
-r=mlflow.search_runs(experiment_names=['house-prices'], order_by=['start_time ASC']); \
-r['commit']=r['tags.mlflow.source.git.commit'].str[:7]; \
-print(r[['tags.mlflow.runName','params.n_estimators','metrics.rmse','commit']].to_string(index=False))"
-```
+Compare the two runs using UI
+
 same params, **same git commit**, but a different RMSE — and *nothing
 in the record explains why*. The data changed underneath us, and the original data is now
 overwritten. **Which data made `before_change`? You can't get it back.** Git tracked the code,
@@ -212,7 +195,7 @@ Reproducibility restored.
  
 ---
  
-## The complete mental model (the final takeaway slide)
+## The complete mental model
 | What you version | Tool |
 |---|---|
 | experiments — params, metrics, the model | **MLflow** |
