@@ -1,0 +1,13 @@
+services:
+  lab:
+    build: .
+    image: mlops-reproducibilit-tracking-lab:latest        # built once, reused every run
+    container_name: mlops-rep-track
+    ports:
+      - "5000:5000"     # MLflow UI
+    volumes:
+      - ./project:/workspace            # live code + data; mlflow.db persists here
+      - ./dvc-remote:/dvc-remote        # local DVC "remote" — data store persists on host
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
