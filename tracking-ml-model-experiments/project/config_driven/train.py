@@ -17,6 +17,7 @@ warnings.filterwarnings("ignore")
 
 import yaml
 import time
+import os
 import pandas as pd
 import mlflow
 import mlflow.sklearn
@@ -52,7 +53,7 @@ def main(config_path):
         X, y, test_size=data_cfg["test_size"], random_state=data_cfg["seed"]
     )
 
-    mlflow.set_tracking_uri(f"sqlite:///{DB_PATH}")
+    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://mlflow-server:5000"))
     mlflow.set_experiment("house-prices")     # same experiment -> compares with CLI runs
 
     with mlflow.start_run(run_name=cfg.get("run_name", "config_run")):

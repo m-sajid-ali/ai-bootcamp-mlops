@@ -8,7 +8,7 @@ but a different result... and only the data_md5 in MLflow reveals why.
 """
 import pandas as pd
 
-path = "house_prices.csv"
+path = "data/house_prices.csv"
 df = pd.read_csv(path)
 before = len(df)
 

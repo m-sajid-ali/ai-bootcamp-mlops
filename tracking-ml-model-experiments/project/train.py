@@ -9,6 +9,7 @@ in build_features(). Changing that is a real code change -> commit it before run
 """
 import argparse
 import time
+import os
 import pandas as pd
 import mlflow
 import mlflow.sklearn
@@ -34,7 +35,7 @@ def main(args):
         X, y, test_size=args.test_size, random_state=args.seed
     )
 
-    mlflow.set_tracking_uri("sqlite:///mlflow.db")
+    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://mlflow-server:5000"))
     mlflow.set_experiment("house-prices")
 
     with mlflow.start_run(run_name=args.run_name):

@@ -45,7 +45,7 @@ def main(args):
         X, y, test_size=args.test_size, random_state=args.seed
     )
 
-    mlflow.set_tracking_uri("sqlite:///mlflow.db")
+    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://mlflow-server:5000"))
     mlflow.set_experiment("house-prices")     # same experiment -> compare with earlier runs
 
     with mlflow.start_run(run_name=args.run_name):

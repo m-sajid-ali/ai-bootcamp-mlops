@@ -3,6 +3,8 @@ services:
     build: .
     image: mlops-reproducibilit-tracking-lab:latest        # built once, reused every run
     container_name: mlops-rep-track
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow-server:5000
     ports:
       - "5000:5000"     # MLflow UI
     volumes:
@@ -11,3 +13,17 @@ services:
     working_dir: /workspace
     stdin_open: true
     tty: true
+  
+  mlflow-server:
+    build: ./mlflow-server
+    image: mlflow-server:latest
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts --host 0.0.0.0 --port 5000 
+      --allowed-hosts "*" --cors-allowed-origins "*"
+    ports: 
+      - 5001:5000
+    volumes:
+      - ./mlflow-server/mlflow-data:/mlflow
