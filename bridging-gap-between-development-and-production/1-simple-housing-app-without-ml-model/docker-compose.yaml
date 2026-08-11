@@ -4,17 +4,18 @@ services:
     image: nginx:1.29.0
     container_name: frontend-without-ml-model
     environment:
-      - API_URL=http://10.1.134.219:5000
+      - API_URL=http://10.1.134.219:4001
     volumes:
       - ./2-frontend/nginx.template.conf:/etc/nginx/templates/default.conf.template
       - ./2-frontend/src:/usr/share/nginx/html:ro
     ports:
-      - 80:80
+      - 4000:80
     depends_on:
       - backend-without-ml-model
 
   backend-without-ml-model:
+    build: ./3-backend
     image: housing-backend-app-without-ml-model
     container_name: backend-without-ml-model
     ports:
-      - 5000:80
+      - 4001:80
