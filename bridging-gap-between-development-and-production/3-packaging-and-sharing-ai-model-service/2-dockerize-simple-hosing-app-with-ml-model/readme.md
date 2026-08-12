@@ -33,17 +33,20 @@ Your goal is to **dockerize each component separately** and create containers th
 ---
 
 ### 3. Backend (Dockerize with FastAPI)
-- Use the base image: `python:3.10-slim`
+- Use the base image: `python:3.11-slim`
 - Install dependencies from `requirements.txt`.
 - Set the environment variable: ``` MODEL_API_BASE_URL=http://192.168.65.91:8000 ```
 - Use this command to start the app: ``` uvicorn main:app --host 0.0.0.0 --port 80 ```
 - Name your image `app-backend` (or any name you prefer).
 
 ### 4. AI Model API Service (Dockerize with FastAPI)
-- Use the base image: python:3.10-slim
+- Use the base image: python:3.11-slim
 - Install dependencies from requirements.txt.
-- Set the environment variable: ```MODEL_FILENAME=house_price_prediction_model.joblib ```
-- Model is inside the model folder
+- Set the environment variable: 
+    ```
+        MLFLOW_TRACKING_URI=http://10.1.134.219:5001
+        MODEL_URI=models:/house-price-model@champion 
+    ```
 - Use this command to start the app: ``` uvicorn main:app --host 0.0.0.0 --port 80 ```
 - Name your image `ai-model-service` (or any name you prefer).
 
