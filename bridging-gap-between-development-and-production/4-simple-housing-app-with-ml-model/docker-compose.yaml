@@ -4,12 +4,12 @@ services:
     image: nginx:1.29.0
     container_name: frontend-with-ml-model
     environment:
-      - API_URL=http://10.1.134.219:5000
+      - API_URL=http://10.1.134.219:4001
     volumes:
       - ./2-frontend/nginx.template.conf:/etc/nginx/templates/default.conf.template
       - ./2-frontend/src:/usr/share/nginx/html:ro
     ports:
-      - 80:80
+      - 4000:80
     depends_on:
       - backend-with-ml-model
 
@@ -17,17 +17,15 @@ services:
     image: housing-backend-app-with-ml-model
     container_name: backend-with-ml-model
     environment:
-      - MODEL_API_BASE_URL=http://10.1.134.219:8000
+      - MODEL_API_BASE_URL=http://10.1.134.219:4002
     ports:
-      - 5000:80
+      - 4001:80
 
   ai-model-service:
     image: housing-ai-model-service
     container_name: housing-ai-model-service
-    environment:
-      - MODEL_FILENAME=house_price_prediction_model.joblib
-    volumes:
-      - ./4-ai-model-service/model/:/app/model/:ro
+    env_file:
+      - ./4-ai-model-service/.env
     ports:
-      - 8000:80
+      - 4002:80
     restart: always
